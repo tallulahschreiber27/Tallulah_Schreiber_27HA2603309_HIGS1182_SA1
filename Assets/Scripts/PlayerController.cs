@@ -21,9 +21,10 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float centerDeadzone = 2.0f;
 
     [Header("Shooting Settings")]
-    [SerializeField] private float attackRange = 150f;
-    [Tooltip("Make sure to check both the Asteroid and Enemy layers in your inspector dropdown context!")]
-    [SerializeField] private LayerMask shootableLayers;
+    [Tooltip("Drag your laser/projectile prefab here!")]
+    [SerializeField] private GameObject laserPrefab;
+    [Tooltip("Speed of the spawned projectile.")]
+    [SerializeField] private float laserSpeed = 80f;
     [SerializeField] private Transform firePoint;
 
     private Rigidbody rb;
@@ -103,38 +104,49 @@ public class PlayerController : MonoBehaviour
     {
         if (Input.GetButtonDown("Fire1"))
         {
-            ExecuteRaycastShoot();
+            ExecutePrefabShoot();
         }
     }
 
     /// <summary>
-    /// Section A / B Modular Shooting Method.
-    /// Neutralizes asteroids and enemies on impact without raising the scrap collection score metrics.
+    /// Spawns a projectile prefab at the firePoint, pushes it forward, and plays the audio cue.
     /// </summary>
-    private void ExecuteRaycastShoot()
+    private void ExecutePrefabShoot()
     {
-        Debug.Log("Player fired a laser bolt.");
-        RaycastHit hit;
-
-        Vector3 rayOrigin = firePoint != null ? firePoint.position : transform.position;
-        Vector3 rayDirection = firePoint != null ? firePoint.forward : transform.forward;
-
-        if (Physics.Raycast(rayOrigin, rayDirection, out hit, attackRange, shootableLayers))
+        if (laserPrefab == null)
         {
-            Debug.Log($"Raycast Hit Target: {hit.collider.name}");
+            Debug.LogWarning("PlayerController: Laser Prefab is missing in the Inspector!");
+            return;
+        }
 
-            // Handle hitting an Asteroid
-            if (hit.collider.CompareTag("Asteroid"))
-            {
-                Destroy(hit.collider.gameObject);
-                Debug.Log("[Combat] Asteroid successfully shattered via Raycast!");
-            }
-            // Handle hitting an Enemy Drone
-            else if (hit.collider.CompareTag("Enemy"))
-            {
-                Destroy(hit.collider.gameObject);
-                Debug.Log("[Combat] Hostile Scavenger Drone neutralized via weapon Raycast!");
-            }
+        // Determine launch orientation rules
+        Vector3 spawnPosition = firePoint != null ? firePoint.position : transform.position;
+        Quaternion spawnRotation = firePoint != null ? firePoint.rotation : transform.rotation;
+
+        // 1. Instantiate the laser projectile
+        GameObject projectile = Instantiate(laserPrefab, spawnPosition, spawnRotation);
+
+        // 2. Add forward linear velocity to the projectile's Rigidbody
+        Rigidbody projectileRb = projectile.GetComponent<Rigidbody>();
+        if (projectileRb != null)
+        {
+            projectileRb.linearVelocity = spawnRotation * Vector3.forward * laserSpeed;
+        }
+        else
+        {
+            // Fallback movement modifier if the projectile lacks a Rigidbody component
+            Debug.LogWarning("Projectile lacks a Rigidbody component! Forcing straight translation.");
+            Destroy(projectile, 5f); // Auto-cleanup fallback
+        }
+
+        Debug.Log("Player spawned a laser projectile.");
+
+        // ==========================================
+        // PLAY LASER FIRE AUDIO HERE
+        // ==========================================
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.laserFire);
         }
     }
 
@@ -142,7 +154,7 @@ public class PlayerController : MonoBehaviour
     {
         if (other.CompareTag("Asteroid"))
         {
-            Debug.Log("3D Asteroid hit the Player via Trigger trigger zone!");
+            Debug.Log("3D Asteroid hit the Player via Trigger zone!");
             TriggerPlayerDeath();
         }
     }
@@ -158,6 +170,14 @@ public class PlayerController : MonoBehaviour
 
     private void TriggerPlayerDeath()
     {
+        // ==========================================
+        // PLAY GAME OVER AUDIO HERE
+        // ==========================================
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.gameOver);
+        }
+
         if (GameManager.Instance != null)
         {
             GameManager.Instance.TriggerGameOver();

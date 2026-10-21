@@ -23,6 +23,18 @@ public class Collectible : MonoBehaviour
 
             Debug.Log($"[Collection] Player retrieved a {collectibleType} unit!");
 
+            // ==========================================
+            // PLAY COLLECTIBLE AUDIO HERE
+            // ==========================================
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.collectiblePickup);
+            }
+            else
+            {
+                Debug.LogWarning("AudioManager Instance is missing from the scene!");
+            }
+
             //Update the score exactly once (there was a bug where it doubled)
             if (GameManager.Instance != null)
             {
