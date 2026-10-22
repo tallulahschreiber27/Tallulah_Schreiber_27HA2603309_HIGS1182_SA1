@@ -42,9 +42,25 @@ public class Asteroid : MonoBehaviour
         // 2. Check if the object that entered the trigger is genuinely the Player
         if (other.CompareTag("Player") && LayerMask.LayerToName(other.gameObject.layer) == "Player")
         {
+            // Extract the player component to let the ship verify its own invincibility status [INDEX: 0.1.4]
+            PlayerController player = other.GetComponent<PlayerController>();
+            if (player != null)
+            {
+                // Send collision events up to the Player Controller logic loops safely
+                player.SendMessage("TriggerPlayerDeath", SendMessageOptions.DontRequireReceiver);
+
+                // Intercept check: If the player shield blocks death, do not destroy this asteroid either! [INDEX: 0.1.3]
+                if (PowerUpManager.Instance != null && PowerUpManager.Instance.isInvincible)
+                {
+                    Debug.Log("[Combat] Asteroid harmlessly deflected off the player's invincibility shields.");
+                    return;
+                }
+            }
+
+            // Fallback terminal execution paths if the player does not have an active invincibility shield
             Debug.Log("[Combat] Asteroid physically crushed the Player!");
 
-            // Play game over audio
+            // Play game over audio using your working architecture clip references
             if (AudioManager.Instance != null)
             {
                 AudioManager.Instance.PlaySFX(AudioManager.Instance.gameOver);
@@ -54,7 +70,7 @@ public class Asteroid : MonoBehaviour
                 Debug.LogWarning("AudioManager Instance is missing from the scene!");
             }
 
-            // Call the game over screen
+            // Call the game over screen via your custom GameManager script framework
             if (GameManager.Instance != null)
             {
                 GameManager.Instance.TriggerGameOver();
@@ -64,6 +80,7 @@ public class Asteroid : MonoBehaviour
                 Debug.LogWarning("GameManager Instance is missing from the scene!");
             }
 
+            // Destroy elements safely only when shields are inactive
             Destroy(other.gameObject);
             Destroy(gameObject);
         }

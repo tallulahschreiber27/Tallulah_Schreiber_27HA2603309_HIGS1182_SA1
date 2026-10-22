@@ -19,6 +19,12 @@ public class GameManager : MonoBehaviour
     [Header("Difficulty Scaling HUD Feedback")]
     [SerializeField] private TextMeshProUGUI difficultyNotificationText;
 
+    [Header("Power-Up UI Overlays (New Integration)")]
+    [Tooltip("Drag the main screen UI canvas TextMeshPro element here.")]
+    [SerializeField] private TextMeshProUGUI screenPowerUpText;
+    [Tooltip("Drag the small floating text wrapper sitting right above the player drone transform here.")]
+    [SerializeField] private TextMeshProUGUI floatingCountdownText;
+
     [Header("Scene Navigation Names")]
     [SerializeField] private string mainMenuScene = "MainMenu";
     [SerializeField] private string gameplayScene = "Gameplay";
@@ -26,9 +32,8 @@ public class GameManager : MonoBehaviour
     [Header("Linked Reference Components")]
     [SerializeField] private AsteroidsSpawner asteroidSpawnerComponent;
     [SerializeField] private EnemyAI enemyAIComponent;
-    [SerializeField] private GameObject enemyPrefab; 
+    [SerializeField] private GameObject enemyPrefab;
 
-    
     private int currentScore = 0;
     private int persistentHighScore = 0;
     private bool isGameActive = true;
@@ -36,6 +41,9 @@ public class GameManager : MonoBehaviour
 
     // Milestone Difficulty Flags
     private bool hasDifficultyScaledThisRun = false;
+
+    // Routine tracking reference to prevent overlapping countdown loops
+    private Coroutine activeUICountdownRoutine;
 
     // Public property gateway for Enemy AI validation checks
     public bool HasDifficultyScaledThisRun => hasDifficultyScaledThisRun;
@@ -61,6 +69,7 @@ public class GameManager : MonoBehaviour
 
         InitializeUI();
         UpdateScoreUI();
+        ClearPowerUpUI(); // Ensure text is cleared on start frame
     }
 
     private void Update()
@@ -162,19 +171,57 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    // Reset highscore method
+    /// <summary>
+    /// Public UI Method called by PowerUpManager to launch matching HUD text updates [INDEX: 0.1.4].
+    /// </summary>
+    public void StartPowerUpUITimer(string powerUpName, float duration)
+    {
+        if (activeUICountdownRoutine != null)
+        {
+            StopCoroutine(activeUICountdownRoutine);
+        }
+
+        activeUICountdownRoutine = StartCoroutine(PowerUpUICountdownRoutine(powerUpName, duration));
+    }
+
+    private System.Collections.IEnumerator PowerUpUICountdownRoutine(string powerUpName, float duration)
+    {
+        if (screenPowerUpText != null)
+        {
+            screenPowerUpText.text = $"POWERUP: {powerUpName}";
+        }
+
+        float timeRemaining = duration;
+        while (timeRemaining > 0)
+        {
+            if (floatingCountdownText != null)
+            {
+                floatingCountdownText.text = Mathf.CeilToInt(timeRemaining).ToString();
+            }
+
+            yield return new WaitForSeconds(1f);
+            timeRemaining -= 1f;
+        }
+
+        ClearPowerUpUI();
+    }
+
+    /// <summary>
+    /// Restores standard fallback interface state fields once buffs expire cleanly.
+    /// </summary>
+    public void ClearPowerUpUI()
+    {
+        if (screenPowerUpText != null) screenPowerUpText.text = "POWERUP: NONE";
+        if (floatingCountdownText != null) floatingCountdownText.text = "";
+    }
+
     /// <summary>
     /// Public UI method to wipe the score records and refresh the HUD text instantly.
     /// </summary>
     public void ResetHighScoreButtonCommand()
     {
-        // Wipe the actual file from the computer's storage disk
         SaveManager.ResetPersistentData();
-
-        // Clear out runtime active tracking fields back to baseline defaults
         persistentHighScore = 0;
-
-        // Immediately re-render screen UI texts so it falls back to 0 instantly
         UpdateScoreUI();
 
         Debug.Log("[Game Loop] High Score counter reset event cleared through UI button click interface.");

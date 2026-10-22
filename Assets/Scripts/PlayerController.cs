@@ -58,7 +58,14 @@ public class PlayerController : MonoBehaviour
         float moveX = Input.GetAxisRaw("Horizontal");
         float moveZ = Input.GetAxisRaw("Vertical");
 
-        Vector3 movement = new Vector3(moveX, 0f, moveZ).normalized * moveSpeed;
+        //  Power-Up Speed Check: Accelerate speed if the thruster boost is running [INDEX: 0.1.3]
+        float currentSpeed = moveSpeed;
+        if (PowerUpManager.Instance != null && PowerUpManager.Instance.isSpeedBoosted)
+        {
+            currentSpeed = moveSpeed * 1.6f; // Boosts baseline speed by 60%
+        }
+
+        Vector3 movement = new Vector3(moveX, 0f, moveZ).normalized * currentSpeed;
         rb.linearVelocity = movement;
 
         float clampedX = Mathf.Clamp(transform.position.x, xBounds.x, xBounds.y);
@@ -110,6 +117,7 @@ public class PlayerController : MonoBehaviour
 
     /// <summary>
     /// Spawns a projectile prefab at the firePoint, pushes it forward, and plays the audio cue.
+    /// Supports Scatter-Shot power-up split matrices programmatically [INDEX: 0.1.3].
     /// </summary>
     private void ExecutePrefabShoot()
     {
@@ -119,60 +127,74 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        // Determine launch orientation rules
         Vector3 spawnPosition = firePoint != null ? firePoint.position : transform.position;
         Quaternion spawnRotation = firePoint != null ? firePoint.rotation : transform.rotation;
 
-        // 1. Instantiate the laser projectile
-        GameObject projectile = Instantiate(laserPrefab, spawnPosition, spawnRotation);
+        // 1. Fire Main Center Laser Projectile
+        SpawnIndividualLaser(spawnPosition, spawnRotation);
 
-        // 2. Add forward linear velocity to the projectile's Rigidbody
-        Rigidbody projectileRb = projectile.GetComponent<Rigidbody>();
-        if (projectileRb != null)
+        //  Power-Up Scatter Shot Check: Fires 2 additional angled lasers [INDEX: 0.1.3]
+        if (PowerUpManager.Instance != null && PowerUpManager.Instance.isScatterActive)
         {
-            projectileRb.linearVelocity = spawnRotation * Vector3.forward * laserSpeed;
-        }
-        else
-        {
-            // Fallback movement modifier if the projectile lacks a Rigidbody component
-            Debug.LogWarning("Projectile lacks a Rigidbody component! Forcing straight translation.");
-            Destroy(projectile, 5f); // Auto-cleanup fallback
+            Quaternion leftRotation = spawnRotation * Quaternion.Euler(0f, -25f, 0f);
+            Quaternion rightRotation = spawnRotation * Quaternion.Euler(0f, 25f, 0f);
+
+            SpawnIndividualLaser(spawnPosition, leftRotation);
+            SpawnIndividualLaser(spawnPosition, rightRotation);
+            Debug.Log("[Combat Engine] Scatter-Shot spread matrix unleashed.");
         }
 
-        Debug.Log("Player spawned a laser projectile.");
+        Debug.Log("Player spawned laser configuration.");
 
-        // ==========================================
-        // PLAY LASER FIRE AUDIO HERE
-        // ==========================================
         if (AudioManager.Instance != null)
         {
             AudioManager.Instance.PlaySFX(AudioManager.Instance.laserFire);
         }
     }
 
+    private void SpawnIndividualLaser(Vector3 position, Quaternion rotation)
+    {
+        GameObject projectile = Instantiate(laserPrefab, position, rotation);
+        Rigidbody projectileRb = projectile.GetComponent<Rigidbody>();
+
+        if (projectileRb != null)
+        {
+            projectileRb.linearVelocity = rotation * Vector3.forward * laserSpeed;
+        }
+        else
+        {
+            Debug.LogWarning("Projectile lacks a Rigidbody component! Forcing straight translation.");
+            Destroy(projectile, 5f);
+        }
+    }
+
     private void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag("Asteroid"))
+        if (other.CompareTag("Asteroid") || other.CompareTag("Enemy"))
         {
-            Debug.Log("3D Asteroid hit the Player via Trigger zone!");
+            Debug.Log($"[Collision Trigger] Ship impacted threat: {other.gameObject.name}");
             TriggerPlayerDeath();
         }
     }
 
     private void OnCollisionEnter(Collision collision)
     {
-        if (collision.gameObject.CompareTag("Asteroid"))
+        if (collision.gameObject.CompareTag("Asteroid") || collision.gameObject.CompareTag("Enemy"))
         {
-            Debug.Log("The drone smashed into an Asteroid. Game Over!");
+            Debug.Log($"[Physical Impact] Ship crashed into: {collision.gameObject.name}");
             TriggerPlayerDeath();
         }
     }
 
     private void TriggerPlayerDeath()
     {
-        // ==========================================
-        // PLAY GAME OVER AUDIO HERE
-        // ==========================================
+        //  Power-Up Invincibility Check: Intercepts destruction vector if shield is running [INDEX: 0.1.3]
+        if (PowerUpManager.Instance != null && PowerUpManager.Instance.isInvincible)
+        {
+            Debug.Log("[Shield Defense] Damage completely neutralized by the active Invincibility Power-Up!");
+            return; // Exits the method early so the player survives safely!
+        }
+
         if (AudioManager.Instance != null)
         {
             AudioManager.Instance.PlaySFX(AudioManager.Instance.gameOver);

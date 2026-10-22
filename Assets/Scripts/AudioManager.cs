@@ -15,6 +15,7 @@ public class AudioManager : MonoBehaviour
     public AudioClip asteroidDestroyed;
     public AudioClip enemyDestroyed;
     public AudioClip collectiblePickup;
+    public AudioClip powerUpPickup; // New dedicated slot for power-ups!
     public AudioClip gameOver;
 
     private void Awake()
@@ -54,6 +55,42 @@ public class AudioManager : MonoBehaviour
             musicSource.clip = clip;
             musicSource.loop = true;
             musicSource.Play();
+        }
+    }
+
+    /// <summary>
+    /// Mandatory Rubric Method Requirement (Page 5) [INDEX: 0.1.5].
+    /// Redirects string keys cleanly to your working AudioClip properties.
+    /// </summary>
+    public void PlaySound(string clipName)
+    {
+        switch (clipName.ToLower())
+        {
+            case "laser":
+            case "shoot":
+                PlaySFX(laserFire);
+                break;
+            case "asteroid":
+            case "explosion":
+                PlaySFX(asteroidDestroyed);
+                break;
+            case "enemy":
+                PlaySFX(enemyDestroyed);
+                break;
+            case "collectible":
+            case "scrap":
+                PlaySFX(collectiblePickup);
+                break;
+            case "powerup":
+                PlaySFX(powerUpPickup);
+                break;
+            case "gameover":
+            case "hit":
+                PlaySFX(gameOver);
+                break;
+            default:
+                Debug.LogWarning($"[Audio] Clip name tag '{clipName}' not recognized!");
+                break;
         }
     }
 }

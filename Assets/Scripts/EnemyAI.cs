@@ -127,7 +127,28 @@ public class EnemyAI : MonoBehaviour
     {
         if (collision.gameObject.CompareTag("Player"))
         {
-            if (GameManager.Instance != null) GameManager.Instance.TriggerGameOver();
+            // Extract the player component to let the ship verify its own invincibility status [INDEX: 0.1.4]
+            PlayerController player = collision.gameObject.GetComponent<PlayerController>();
+            if (player != null)
+            {
+                // Send collision events up to the Player Controller logic loops safely
+                player.SendMessage("TriggerPlayerDeath", SendMessageOptions.DontRequireReceiver);
+
+                // Shield Intercept: If the player shield blocks death, save this hunter drone too! [INDEX: 0.1.3]
+                if (PowerUpManager.Instance != null && PowerUpManager.Instance.isInvincible)
+                {
+                    Debug.Log("[AI Engine] Hunter drone bumped harmlessly into the player's active invincibility shield.");
+                    return;
+                }
+            }
+
+            // Standard terminal execution path if the player shield isn't currently active
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.TriggerGameOver();
+            }
+
+            Destroy(gameObject); // Explode this specific fighter drone instance on impact
         }
     }
 
