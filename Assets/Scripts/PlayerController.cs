@@ -32,14 +32,23 @@ public class PlayerController : MonoBehaviour
     private Vector3 lastMousePosition;
     private Quaternion targetRotation;
 
+    // Reference cache for your dedicated animation script
+    private AnimationController animController;
+
     private void Start()
     {
         rb = GetComponent<Rigidbody>();
         mainCamera = Camera.main;
+        animController = GetComponent<AnimationController>(); // Efficient component access
 
         if (rb == null)
         {
             Debug.LogError("PlayerController: Missing required Rigidbody component!");
+        }
+
+        if (animController == null)
+        {
+            Debug.LogWarning("PlayerController: Missing required AnimationController component on this GameObject!");
         }
 
         lastMousePosition = Input.mousePosition;
@@ -58,7 +67,7 @@ public class PlayerController : MonoBehaviour
         float moveX = Input.GetAxisRaw("Horizontal");
         float moveZ = Input.GetAxisRaw("Vertical");
 
-        //  Power-Up Speed Check: Accelerate speed if the thruster boost is running [INDEX: 0.1.3]
+        // Power-Up Speed Check: Accelerate speed if the thruster boost is running
         float currentSpeed = moveSpeed;
         if (PowerUpManager.Instance != null && PowerUpManager.Instance.isSpeedBoosted)
         {
@@ -67,6 +76,17 @@ public class PlayerController : MonoBehaviour
 
         Vector3 movement = new Vector3(moveX, 0f, moveZ).normalized * currentSpeed;
         rb.linearVelocity = movement;
+
+        // --- ANIMATION INTERACTION LOOP ---
+        if (animController != null)
+        {
+            // Tracks if there is any movement engine thrust being supplied
+            bool isMoving = (moveX != 0 || moveZ != 0);
+            animController.SetMovementAnimation(isMoving);
+
+            // Directly maps your A/D values (-1 to 1) onto your Drone_Left and Drone_Right animations
+            animController.SetHorizontalAnimation(moveX);
+        }
 
         float clampedX = Mathf.Clamp(transform.position.x, xBounds.x, xBounds.y);
         float clampedZ = Mathf.Clamp(transform.position.z, zBounds.x, zBounds.y);
@@ -115,10 +135,6 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Spawns a projectile prefab at the firePoint, pushes it forward, and plays the audio cue.
-    /// Supports Scatter-Shot power-up split matrices programmatically [INDEX: 0.1.3].
-    /// </summary>
     private void ExecutePrefabShoot()
     {
         if (laserPrefab == null)
@@ -133,7 +149,7 @@ public class PlayerController : MonoBehaviour
         // 1. Fire Main Center Laser Projectile
         SpawnIndividualLaser(spawnPosition, spawnRotation);
 
-        //  Power-Up Scatter Shot Check: Fires 2 additional angled lasers [INDEX: 0.1.3]
+        // Power-Up Scatter Shot Check: Fires 2 additional angled lasers
         if (PowerUpManager.Instance != null && PowerUpManager.Instance.isScatterActive)
         {
             Quaternion leftRotation = spawnRotation * Quaternion.Euler(0f, -25f, 0f);
@@ -145,6 +161,12 @@ public class PlayerController : MonoBehaviour
         }
 
         Debug.Log("Player spawned laser configuration.");
+
+        // Trigger the custom weapon animation clip via the controller
+        if (animController != null)
+        {
+            animController.PlayShootAnimation();
+        }
 
         if (AudioManager.Instance != null)
         {
@@ -188,11 +210,17 @@ public class PlayerController : MonoBehaviour
 
     private void TriggerPlayerDeath()
     {
-        //  Power-Up Invincibility Check: Intercepts destruction vector if shield is running [INDEX: 0.1.3]
+        // Power-Up Invincibility Check: Intercepts destruction vector if shield is running
         if (PowerUpManager.Instance != null && PowerUpManager.Instance.isInvincible)
         {
             Debug.Log("[Shield Defense] Damage completely neutralized by the active Invincibility Power-Up!");
-            return; // Exits the method early so the player survives safely!
+            return;
+        }
+
+        // Trigger the visual impact or explosion animation before destroying
+        if (animController != null)
+        {
+            animController.PlayHitAnimation();
         }
 
         if (AudioManager.Instance != null)

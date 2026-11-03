@@ -1,62 +1,42 @@
 using UnityEngine;
 
+[RequireComponent(typeof(Animator))]
 public class AnimationController : MonoBehaviour
 {
     private Animator animator;
-    private Rigidbody rb;
 
-    private void Start()
+    private void Awake()
     {
-        // Section B Rule: Efficient programmatic component caching at runtime [INDEX: 0.1.5]
-        animator = GetComponentInChildren<Animator>();
-        rb = GetComponent<Rigidbody>();
-
-        if (animator == null)
-        {
-            Debug.LogError($"[Animation Error] Animator component missing on children of {gameObject.name}!");
-        }
-    }
-
-    private void Update()
-    {
-        HandleMovementVelocityTracking();
+        animator = GetComponent<Animator>();
     }
 
     /// <summary>
-    /// Tracks physical Rigidbody vectors to toggle between Idle and Thrust loops automatically [INDEX: 0.1.4].
+    /// Updates the movement state animation based on whether the player is moving forward/back.
     /// </summary>
-    private void HandleMovementVelocityTracking()
+    public void SetMovementAnimation(bool moving)
     {
-        if (rb == null || animator == null) return;
-
-        // Read the linear velocity magnitude to check if the drone ship is actively flying
-        bool isMoving = rb.linearVelocity.magnitude > 0.1f;
-
-        // Section A Rubric: Set parameter values inside your Animator state window [INDEX: 0.1.4]
-        animator.SetBool("IsMoving", isMoving);
+        animator.SetBool("isMoving", moving);
     }
 
     /// <summary>
-    /// Custom Core Method: Triggers the weapon firing animation frame recoil instantly [INDEX: 0.1.4, 0.1.5].
+    /// Updates the horizontal banking/leaning animation using A/D input.
     /// </summary>
+    /// <param name="horizontalValue">Value from -1 (Left) to 1 (Right).</param>
+    public void SetHorizontalAnimation(float horizontalValue)
+    {
+        // Passes the raw float directly to control Blend Tree blending or transitions
+        animator.SetFloat("horizontalInput", horizontalValue);
+    }
+
     public void PlayShootAnimation()
     {
-        if (animator != null)
-        {
-            animator.SetTrigger("Shoot");
-            Debug.Log("[Animation Event] Executed weapon recoil frame state."); // Debug trace log requirement
-        }
+        animator.SetTrigger("shoot");
+        Debug.Log("AnimationController: Shoot animation triggered.");
     }
 
-    /// <summary>
-    /// Custom Core Method: Forces transition into terminal crash sequence parameters [INDEX: 0.1.4, 0.1.5].
-    /// </summary>
-    public void PlayDeathAnimation()
+    public void PlayHitAnimation()
     {
-        if (animator != null)
-        {
-            animator.SetTrigger("Die");
-            Debug.Log("[Animation Event] Executed structural destruction state layout.");
-        }
+        animator.SetTrigger("hit");
+        Debug.Log("AnimationController: Hit/Death animation triggered.");
     }
 }
