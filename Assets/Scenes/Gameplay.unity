@@ -5938,7 +5938,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &2068994958
 Transform:
   m_ObjectHideFlags: 0
@@ -5967,13 +5967,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   asteroidPrefab: {fileID: 1672783293487498606, guid: 863f18aa3867c3b49a94757a5c8050af, type: 3}
-  maxAsteroidsCount: 12
-  xSpawnRange: {x: -198.2, y: 173}
-  zSpawnRange: {x: -150, y: 160}
   playerTransform: {fileID: 1263091408}
-  safeDistanceZone: 4
-  speedRange: {x: 3, y: 7}
-  maxSidewaysScatter: 2
+  spawnRange: {x: 20, y: 0, z: 20}
+  spawnRate: 5
+  minSpawnAmount: 2
+  maxSpawnAmount: 5
+  safetyRadius: 5
+  maxSpawnAttempts: 10
 --- !u!1 &2099412681
 GameObject:
   m_ObjectHideFlags: 0

@@ -1,122 +1,102 @@
-using System.Collections.Generic;
 using UnityEngine;
 
-public class AsteroidsSpawner : MonoBehaviour
+public class AsteroidSpawner : MonoBehaviour
 {
-    [Header("Prefab Assignment")]
+    [Header("Prefabs & References")]
     [SerializeField] private GameObject asteroidPrefab;
-
-    [Header("Spawning Count")]
-    [Tooltip("The exact number of asteroids that should always be present in the game.")]
-    [SerializeField] private int maxAsteroidsCount = 15;
-
-    [Header("Spawning Boundaries")]
-    [Tooltip("The minimum and maximum X coordinates taken from your inspector bounds.")]
-    [SerializeField] private Vector2 xSpawnRange = new Vector2(-198f, 173f);
-    [Tooltip("The minimum and maximum Z coordinates taken from your inspector bounds.")]
-    [SerializeField] private Vector2 zSpawnRange = new Vector2(-157f, 168f);
-
-    [Header("Player Safety Buffer")]
     [SerializeField] private Transform playerTransform;
-    [SerializeField] private float safeDistanceZone = 10f;
 
-    [Header("Scatter Settings")]
-    [SerializeField] private Vector2 speedRange = new Vector2(5f, 15f);
-    [SerializeField] private float maxSidewaysScatter = 5f;
+    [Header("Spawn Settings")]
+    [SerializeField] private Vector3 spawnRange = new Vector3(20f, 0f, 20f);
 
-    private List<GameObject> activeAsteroids = new List<GameObject>();
+    // --- UPDATED TIMER VARIABLES ---
+    [Tooltip("Time in seconds before the first wave spawns after the game starts.")]
+    [SerializeField] private float initialSpawnDelay = 0f; // Set to 0f for instant loading!
 
-    // Debug counter tracking
-    private int totalAsteroidsSpawnedCount = 0;
+    [Tooltip("Time in seconds between subsequent asteroid wave spawns.")]
+    [SerializeField] private float waveIntervalRate = 3f;
+    // -------------------------------
+
+    [Header("Wave Amounts")]
+    [SerializeField] private int minSpawnAmount = 2;
+    [SerializeField] private int maxSpawnAmount = 5;
+    [SerializeField] private int maxTotalAsteroids = 20;
+
+    [Header("Safety Buffer Settings")]
+    [SerializeField] private float safetyRadius = 5f;
+    [SerializeField] private int maxSpawnAttempts = 10;
 
     private void Start()
     {
         if (playerTransform == null)
         {
-            GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
-            if (playerObj != null) playerTransform = playerObj.transform;
-        }
-
-        MaintainAsteroidPopulation();
-    }
-
-    private void Update()
-    {
-        MonitorActiveAsteroids();
-        MaintainAsteroidPopulation();
-    }
-
-    private void MonitorActiveAsteroids()
-    {
-        for (int i = activeAsteroids.Count - 1; i >= 0; i--)
-        {
-            if (activeAsteroids[i] == null)
+            GameObject player = GameObject.FindGameObjectWithTag("Player");
+            if (player != null)
             {
-                activeAsteroids.RemoveAt(i);
+                playerTransform = player.transform;
             }
         }
+
+        // --- NEW INITIALIZATION LOGIC ---
+        // Instantly loads the first batch if initialSpawnDelay is 0, 
+        // otherwise waits for the specified timer duration before looping.
+        InvokeRepeating(nameof(SpawnAsteroidWave), initialSpawnDelay, waveIntervalRate);
+        Debug.Log($"Spawner: Initialized with a startup delay of {initialSpawnDelay}s and an interval of {waveIntervalRate}s.");
     }
 
-    private void MaintainAsteroidPopulation()
+    private void SpawnAsteroidWave()
     {
-        while (activeAsteroids.Count < maxAsteroidsCount)
+        if (asteroidPrefab == null) return;
+
+        // Global Cap check to keep your scene optimized
+        int currentAsteroidCount = GameObject.FindGameObjectsWithTag("Asteroid").Length;
+        if (currentAsteroidCount >= maxTotalAsteroids)
         {
-            SpawnSingleAsteroid();
+            Debug.Log("Spawner: Maximum asteroid limit reached on screen. Skipping wave spawn.");
+            return;
         }
-    }
 
-    public void SpawnSingleAsteroid()
-    {
-        Vector3 spawnPosition = Vector3.zero;
-        bool validPositionFound = false;
-        int attempts = 0;
-        int maxAttempts = 20;
+        int currentWaveAmount = Random.Range(minSpawnAmount, maxSpawnAmount + 1);
+        Debug.Log($"Spawner: Instantiating a wave of {currentWaveAmount} asteroids.");
 
-        while (!validPositionFound && attempts < maxAttempts)
+        for (int i = 0; i < currentWaveAmount; i++)
         {
-            float randomX = Random.Range(xSpawnRange.x, xSpawnRange.y);
-            float randomZ = Random.Range(zSpawnRange.x, zSpawnRange.y);
-            spawnPosition = new Vector3(randomX, 0f, randomZ);
+            Vector3 finalSpawnPosition = Vector3.zero;
+            bool validPositionFound = false;
+            int attempts = 0;
 
-            if (playerTransform != null)
+            while (!validPositionFound && attempts < maxSpawnAttempts)
             {
-                float distanceToPlayer = Vector3.Distance(spawnPosition, playerTransform.position);
-                if (distanceToPlayer >= safeDistanceZone)
+                attempts++;
+
+                float randomX = Random.Range(-spawnRange.x, spawnRange.x);
+                float randomZ = Random.Range(-spawnRange.z, spawnRange.z);
+                Vector3 potentialPosition = new Vector3(randomX, 0f, randomZ);
+
+                if (playerTransform == null)
                 {
+                    finalSpawnPosition = potentialPosition;
+                    validPositionFound = true;
+                    break;
+                }
+
+                float distanceToPlayer = Vector3.Distance(potentialPosition, playerTransform.position);
+
+                if (distanceToPlayer >= safetyRadius)
+                {
+                    finalSpawnPosition = potentialPosition;
                     validPositionFound = true;
                 }
             }
+
+            if (validPositionFound)
+            {
+                Instantiate(asteroidPrefab, finalSpawnPosition, Quaternion.identity);
+            }
             else
             {
-                validPositionFound = true;
+                Debug.LogWarning($"Spawner: Asteroid #{i + 1} in wave skipped—could not find a safe position.");
             }
-
-            attempts++;
-        }
-
-        if (validPositionFound)
-        {
-            GameObject spawnedAsteroid = Instantiate(asteroidPrefab, spawnPosition, Quaternion.identity);
-            activeAsteroids.Add(spawnedAsteroid);
-
-            //Informs you how many asteroids are currently in the scene
-            totalAsteroidsSpawnedCount++;
-            Debug.Log($"[Spawner Metrics] Asteroid spawned successfully. Current Active: {activeAsteroids.Count} | Total Session Spawns: {totalAsteroidsSpawnedCount}");
-
-            // Accessing Rigidbody component at runtime using GetComponent<> (Section B requirement)
-            Rigidbody asteroidRb = spawnedAsteroid.GetComponent<Rigidbody>();
-            if (asteroidRb != null)
-            {
-                float randomSpeed = Random.Range(speedRange.x, speedRange.y);
-                float randomHorizontalScatter = Random.Range(-maxSidewaysScatter, maxSidewaysScatter);
-
-                float directionModifier = Random.value > 0.5f ? 1f : -1f;
-                asteroidRb.linearVelocity = new Vector3(randomHorizontalScatter, 0f, randomSpeed * directionModifier);
-            }
-        }
-        else
-        {
-            Debug.LogWarning("AsteroidsSpawner: Prevented an asteroid from spawning too close to the player drone!");
         }
     }
 
@@ -124,8 +104,8 @@ public class AsteroidsSpawner : MonoBehaviour
     {
         if (playerTransform != null)
         {
-            Gizmos.color = Color.cyan;
-            Gizmos.DrawWireSphere(playerTransform.position, safeDistanceZone);
+            Gizmos.color = Color.green;
+            Gizmos.DrawWireSphere(playerTransform.position, safetyRadius);
         }
     }
 }

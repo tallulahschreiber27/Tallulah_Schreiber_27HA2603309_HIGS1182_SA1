@@ -30,7 +30,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private string gameplayScene = "Gameplay";
 
     [Header("Linked Reference Components")]
-    [SerializeField] private AsteroidsSpawner asteroidSpawnerComponent;
+    [SerializeField] private AsteroidSpawner asteroidSpawnerComponent;
     [SerializeField] private EnemyAI enemyAIComponent;
     [SerializeField] private GameObject enemyPrefab;
 
