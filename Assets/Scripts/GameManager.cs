@@ -19,10 +19,8 @@ public class GameManager : MonoBehaviour
     [Header("Difficulty Scaling HUD Feedback")]
     [SerializeField] private TextMeshProUGUI difficultyNotificationText;
 
-    [Header("Power-Up UI Overlays (New Integration)")]
-    [Tooltip("Drag the main screen UI canvas TextMeshPro element here.")]
+    [Header("Power-Up UI Overlays")]
     [SerializeField] private TextMeshProUGUI screenPowerUpText;
-    [Tooltip("Drag the small floating text wrapper sitting right above the player drone transform here.")]
     [SerializeField] private TextMeshProUGUI floatingCountdownText;
 
     [Header("Scene Navigation Names")]
@@ -38,14 +36,9 @@ public class GameManager : MonoBehaviour
     private int persistentHighScore = 0;
     private bool isGameActive = true;
     private bool isPaused = false;
-
-    // Milestone Difficulty Flags
     private bool hasDifficultyScaledThisRun = false;
-
-    // Routine tracking reference to prevent overlapping countdown loops
     private Coroutine activeUICountdownRoutine;
 
-    // Public property gateway for Enemy AI validation checks
     public bool HasDifficultyScaledThisRun => hasDifficultyScaledThisRun;
 
     private void Awake()
@@ -63,13 +56,11 @@ public class GameManager : MonoBehaviour
     private void Start()
     {
         Debug.Log("GameManager: Initialized gameplay environment tracking loop.");
-
-        // Load high score from JSON
         persistentHighScore = SaveManager.LoadHighScore();
 
         InitializeUI();
         UpdateScoreUI();
-        ClearPowerUpUI(); // Ensure text is cleared on start frame
+        ClearPowerUpUI();
     }
 
     private void Update()
@@ -88,7 +79,6 @@ public class GameManager : MonoBehaviour
     private void InitializeUI()
     {
         Time.timeScale = 1f;
-
         if (pausePanel != null) pausePanel.SetActive(false);
         if (gameOverPanel != null) gameOverPanel.SetActive(false);
         if (winPanel != null) winPanel.SetActive(false);
@@ -108,13 +98,11 @@ public class GameManager : MonoBehaviour
         if (currentScore > persistentHighScore)
         {
             persistentHighScore = currentScore;
+            SaveManager.SaveHighScore(persistentHighScore);
         }
 
         UpdateScoreUI();
 
-        Debug.Log($"[Score Update] Scavenged item processed. Score: {currentScore}/{targetWinScore}");
-
-        // Increase difficulty trigger
         float halfwayThreshold = targetWinScore / 2f;
         if (currentScore >= halfwayThreshold && !hasDifficultyScaledThisRun)
         {
@@ -128,12 +116,9 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Custom dynamic balancing method triggered explicitly by player score milestones.
-    /// </summary>
     private void TriggerSuccessDifficultyEscalation()
     {
-        Debug.Log("[Game Loop] Player is succeeding! Escallating arena difficulty variables.");
+        Debug.Log("[Game Loop] Player is succeeding! Escalating arena difficulty variables.");
 
         if (difficultyNotificationText != null)
         {
@@ -141,7 +126,6 @@ public class GameManager : MonoBehaviour
             Invoke(nameof(ClearDifficultyNotification), 4.5f);
         }
 
-        // Instantly scan the hierarchy to boost any current enemies that are already alive
         EnemyAI[] allActiveEnemies = FindObjectsByType<EnemyAI>(FindObjectsSortMode.None);
         foreach (EnemyAI enemy in allActiveEnemies)
         {
@@ -161,70 +145,43 @@ public class GameManager : MonoBehaviour
             {
                 secondaryAI.IncreaseAISpeed(1.3f);
             }
-
-            Debug.Log("[AI Engine] Milestone cleared! Forced instantaneous spawn of fleet reinforcement drone.");
-        }
-
-        if (asteroidSpawnerComponent != null)
-        {
-            Debug.Log("[Spawner] Environmental density constraints adjusted to yield tighter threat vectors.");
         }
     }
 
-    /// <summary>
-    /// Public UI Method called by PowerUpManager to launch matching HUD text updates [INDEX: 0.1.4].
-    /// </summary>
     public void StartPowerUpUITimer(string powerUpName, float duration)
     {
         if (activeUICountdownRoutine != null)
         {
             StopCoroutine(activeUICountdownRoutine);
         }
-
         activeUICountdownRoutine = StartCoroutine(PowerUpUICountdownRoutine(powerUpName, duration));
     }
 
     private System.Collections.IEnumerator PowerUpUICountdownRoutine(string powerUpName, float duration)
     {
-        if (screenPowerUpText != null)
-        {
-            screenPowerUpText.text = $"POWERUP: {powerUpName}";
-        }
+        if (screenPowerUpText != null) screenPowerUpText.text = $"POWERUP: {powerUpName}";
 
         float timeRemaining = duration;
         while (timeRemaining > 0)
         {
-            if (floatingCountdownText != null)
-            {
-                floatingCountdownText.text = Mathf.CeilToInt(timeRemaining).ToString();
-            }
-
+            if (floatingCountdownText != null) floatingCountdownText.text = Mathf.CeilToInt(timeRemaining).ToString();
             yield return new WaitForSeconds(1f);
             timeRemaining -= 1f;
         }
-
         ClearPowerUpUI();
     }
 
-    /// <summary>
-    /// Restores standard fallback interface state fields once buffs expire cleanly.
-    /// </summary>
     public void ClearPowerUpUI()
     {
         if (screenPowerUpText != null) screenPowerUpText.text = "POWERUP: NONE";
         if (floatingCountdownText != null) floatingCountdownText.text = "";
     }
 
-    /// <summary>
-    /// Public UI method to wipe the score records and refresh the HUD text instantly.
-    /// </summary>
     public void ResetHighScoreButtonCommand()
     {
         SaveManager.ResetPersistentData();
         persistentHighScore = 0;
         UpdateScoreUI();
-
-        Debug.Log("[Game Loop] High Score counter reset event cleared through UI button click interface.");
     }
 
     private void ClearDifficultyNotification()
@@ -235,29 +192,37 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    private void UpdateScoreUI()
+    {
+        if (scoreText != null) scoreText.text = "Scrap Collected: " + currentScore + " / " + targetWinScore;
+        if (highScoreText != null) highScoreText.text = "High Score: " + persistentHighScore;
+    }
+
+    // --- INTEGRATED COLLECTIBLE MANAGER COMPATIBILITY METHOD ---
     public void SetTargetWinScore(int amount)
     {
         targetWinScore = amount;
         UpdateScoreUI();
+        Debug.Log($"[GameManager] Target win score dynamically configured to: {targetWinScore}");
     }
 
-    private void UpdateScoreUI()
+    public void TriggerGameOver()
     {
-        if (scoreText != null)
-        {
-            scoreText.text = "Scrap Collected: " + currentScore + " / " + targetWinScore;
-        }
+        isGameActive = false;
+        Time.timeScale = 0f;
+        if (gameOverPanel != null) gameOverPanel.SetActive(true);
+    }
 
-        if (highScoreText != null)
-        {
-            highScoreText.text = "High Score: " + persistentHighScore;
-        }
+    public void TriggerWinState()
+    {
+        isGameActive = false;
+        Time.timeScale = 0f;
+        if (winPanel != null) winPanel.SetActive(true);
     }
 
     public void TogglePause()
     {
         isPaused = !isPaused;
-
         if (isPaused)
         {
             Time.timeScale = 0f;
@@ -270,45 +235,18 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    public void TriggerGameOver()
-    {
-        if (!isGameActive) return;
-
-        isGameActive = false;
-        Time.timeScale = 0f;
-
-        SaveManager.SaveHighScore(currentScore);
-
-        if (gameOverPanel != null) gameOverPanel.SetActive(true);
-    }
-
-    private void TriggerWinState()
-    {
-        if (!isGameActive) return;
-
-        isGameActive = false;
-        Time.timeScale = 0f;
-
-        SaveManager.SaveHighScore(currentScore);
-
-        if (winPanel != null) winPanel.SetActive(true);
-    }
-
     public void RestartGame()
     {
-        Time.timeScale = 1f;
         SceneManager.LoadScene(gameplayScene);
     }
 
-    public void ReturnToMainMenu()
+    public void LoadMainMenu()
     {
-        Time.timeScale = 1f;
         SceneManager.LoadScene(mainMenuScene);
     }
 
-    public void StartGame()
+    public void QuitGame()
     {
-        Time.timeScale = 1f;
-        SceneManager.LoadScene(gameplayScene);
+        Application.Quit();
     }
 }

@@ -122,7 +122,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8f31e780bd44da5458fde7637c8670c3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  driftSpeed: 8
+  minDriftSpeed: 8
+  maxDriftSpeed: 12
+  rotationSpeed: 0
 --- !u!54 &2013538797108392220
 Rigidbody:
   m_ObjectHideFlags: 0

@@ -2,28 +2,29 @@ using UnityEngine;
 
 public class EnemyAI : MonoBehaviour
 {
+    public enum AIState { Patrol, Chase }
+
+    [Header("Current State")]
+    [SerializeField] private AIState currentState = AIState.Patrol;
+
     [Header("Movement Configuration")]
     [SerializeField] private float basePatrolSpeed = 4f;
-    [SerializeField] private float baseChaseSpeed = 8f;
+    [SerializeField] private float baseChaseSpeed = 6f;
+    [SerializeField] private float rotationSpeed = 10f;
 
     [Header("Detection Settings")]
     [SerializeField] private Transform playerTarget;
-    [Tooltip("The range at which the enemy drone can spot your drone.")]
-    [SerializeField] private float detectionRange = 25f;
+    [SerializeField] private float detectionRange = 15f;
 
     [Header("Rigid Patrol Boundaries")]
-    [Tooltip("The left (X min) and right (X max) turning points.")]
-    [SerializeField] private Vector2 xPatrolRange = new Vector2(-198f, 173f);
+    [SerializeField] private Vector2 xPatrolRange = new Vector2(-15f, 15f);
 
     [Header("Infinite Respawn Settings")]
-    [Tooltip("Drag your Enemy Drone prefab asset here so it can replace itself when destroyed!")]
     [SerializeField] private GameObject enemyPrefab;
-    [SerializeField] private float spawnZCoordinate = 150f;
+    [SerializeField] private float spawnZCoordinate = 20f;
 
     private float activePatrolSpeed;
     private float activeChaseSpeed;
-
-    private bool isChasingPlayer = false;
     private bool movingRight = true;
     private bool isQuitting = false;
     private Rigidbody rb;
@@ -37,7 +38,7 @@ public class EnemyAI : MonoBehaviour
         if (rb != null)
         {
             rb.useGravity = false;
-            rb.constraints = RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationZ;
+            rb.constraints = RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
         }
 
         if (playerTarget == null)
@@ -46,7 +47,6 @@ public class EnemyAI : MonoBehaviour
             if (playerObj != null) playerTarget = playerObj.transform;
         }
 
-        // If this clone spawns into the world while difficulty is already high, buff speed instantly
         if (GameManager.Instance != null && GameManager.Instance.HasDifficultyScaledThisRun)
         {
             IncreaseAISpeed(1.3f);
@@ -55,14 +55,15 @@ public class EnemyAI : MonoBehaviour
 
     private void FixedUpdate()
     {
-        HandleAIBehaviourStates();
+        EvaluateStateTransitions();
+        ExecuteCurrentStateLogic();
     }
 
-    private void HandleAIBehaviourStates()
+    private void EvaluateStateTransitions()
     {
         if (playerTarget == null)
         {
-            RigidPatrolLoop();
+            currentState = AIState.Patrol;
             return;
         }
 
@@ -70,25 +71,32 @@ public class EnemyAI : MonoBehaviour
 
         if (distanceToPlayer <= detectionRange)
         {
-            if (!isChasingPlayer)
+            if (currentState != AIState.Chase)
             {
-                isChasingPlayer = true;
-                Debug.Log("[AI Engine] Player spotted! Charging straight down.");
+                currentState = AIState.Chase;
+                Debug.Log("[AI Engine] State Change: Chasing Player!");
             }
-            RigidDownwardsChaseLoop();
         }
         else
         {
-            if (isChasingPlayer)
+            if (currentState != AIState.Patrol)
             {
-                isChasingPlayer = false;
-                Debug.Log("[AI Engine] Threat lost. Resuming horizontal border pacing.");
+                currentState = AIState.Patrol;
+                Debug.Log("[AI Engine] State Change: Resuming Patrol.");
             }
-            RigidPatrolLoop();
         }
     }
 
-    private void RigidPatrolLoop()
+    private void ExecuteCurrentStateLogic()
+    {
+        switch (currentState)
+        {
+            case AIState.Patrol: ExecutePatrolLogic(); break;
+            case AIState.Chase: ExecuteChaseLogic(); break;
+        }
+    }
+
+    private void ExecutePatrolLogic()
     {
         Vector3 moveDirection = Vector3.zero;
 
@@ -105,50 +113,40 @@ public class EnemyAI : MonoBehaviour
 
         if (rb != null) rb.linearVelocity = moveDirection * activePatrolSpeed;
 
-        if (moveDirection != Vector3.zero) transform.forward = moveDirection;
+        if (moveDirection != Vector3.zero)
+        {
+            Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.fixedDeltaTime);
+        }
     }
 
-    private void RigidDownwardsChaseLoop()
+    private void ExecuteChaseLogic()
     {
-        float xDirection = 0f;
+        if (playerTarget == null) return;
 
-        if (playerTarget.position.x > transform.position.x + 1f) xDirection = 1f;
-        else if (playerTarget.position.x < transform.position.x - 1f) xDirection = -1f;
-
-        Vector3 moveDirection = new Vector3(xDirection, 0f, -1f).normalized;
+        Vector3 moveDirection = (playerTarget.position - transform.position);
+        moveDirection.y = 0f;
+        moveDirection.Normalize();
 
         if (rb != null) rb.linearVelocity = moveDirection * activeChaseSpeed;
 
-        // Force orientation straight down the grid map (no weird rotation tilting)
-        transform.forward = Vector3.back;
+        if (moveDirection != Vector3.zero)
+        {
+            Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.fixedDeltaTime);
+        }
     }
 
     private void OnCollisionEnter(Collision collision)
     {
         if (collision.gameObject.CompareTag("Player"))
         {
-            // Extract the player component to let the ship verify its own invincibility status [INDEX: 0.1.4]
             PlayerController player = collision.gameObject.GetComponent<PlayerController>();
             if (player != null)
             {
-                // Send collision events up to the Player Controller logic loops safely
-                player.SendMessage("TriggerPlayerDeath", SendMessageOptions.DontRequireReceiver);
-
-                // Shield Intercept: If the player shield blocks death, save this hunter drone too! [INDEX: 0.1.3]
-                if (PowerUpManager.Instance != null && PowerUpManager.Instance.isInvincible)
-                {
-                    Debug.Log("[AI Engine] Hunter drone bumped harmlessly into the player's active invincibility shield.");
-                    return;
-                }
+                player.TriggerPlayerDeath();
             }
-
-            // Standard terminal execution path if the player shield isn't currently active
-            if (GameManager.Instance != null)
-            {
-                GameManager.Instance.TriggerGameOver();
-            }
-
-            Destroy(gameObject); // Explode this specific fighter drone instance on impact
+            Destroy(gameObject);
         }
     }
 
@@ -156,19 +154,7 @@ public class EnemyAI : MonoBehaviour
     {
         activePatrolSpeed = basePatrolSpeed * factor;
         activeChaseSpeed = baseChaseSpeed * factor;
-
-        if (rb != null)
-        {
-            rb.linearVelocity = rb.linearVelocity * factor;
-        }
-
-        var renderer = GetComponentInChildren<Renderer>();
-        if (renderer != null)
-        {
-            renderer.material.color = Color.red;
-        }
-
-        Debug.Log($"[AI Engine] {gameObject.name} speed boosted! Patrol: {activePatrolSpeed}, Chase: {activeChaseSpeed}");
+        Debug.Log($"[AI Engine] Speed updated by factor: {factor}");
     }
 
     private void OnDestroy()
@@ -180,7 +166,6 @@ public class EnemyAI : MonoBehaviour
             float randomX = Random.Range(xPatrolRange.x, xPatrolRange.y);
             Vector3 respawnPosition = new Vector3(randomX, transform.position.y, spawnZCoordinate);
             Instantiate(enemyPrefab, respawnPosition, Quaternion.identity);
-            Debug.Log("[AI Engine] Enemy destroyed. Replacement drone spawned.");
         }
     }
 

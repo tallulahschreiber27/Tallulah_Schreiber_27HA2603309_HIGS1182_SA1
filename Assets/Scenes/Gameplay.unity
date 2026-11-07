@@ -1885,7 +1885,7 @@ PrefabInstance:
       objectReference: {fileID: 652328204}
     - target: {fileID: 4569227155879785795, guid: 79591ca9b9d242946ae97fee434d11f9, type: 3}
       propertyPath: m_VersionIndex
-      value: 275
+      value: 278
       objectReference: {fileID: 0}
     - target: {fileID: 8592801424080214853, guid: 79591ca9b9d242946ae97fee434d11f9, type: 3}
       propertyPath: m_Mesh
@@ -5968,10 +5968,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   asteroidPrefab: {fileID: 1672783293487498606, guid: 863f18aa3867c3b49a94757a5c8050af, type: 3}
   playerTransform: {fileID: 1263091408}
-  spawnRange: {x: 20, y: 0, z: 20}
-  spawnRate: 5
-  minSpawnAmount: 2
-  maxSpawnAmount: 5
+  spawnRange: {x: 20, y: 10, z: 20}
+  initialSpawnDelay: 0
+  waveIntervalRate: 3
+  minSpawnAmount: 5
+  maxSpawnAmount: 8
+  maxTotalAsteroids: 20
   safetyRadius: 5
   maxSpawnAttempts: 10
 --- !u!1 &2099412681

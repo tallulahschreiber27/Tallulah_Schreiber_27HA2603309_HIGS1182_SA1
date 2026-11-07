@@ -3,10 +3,17 @@ using UnityEngine;
 public class Asteroid : MonoBehaviour
 {
     [Header("Movement Settings")]
-    [Tooltip("Base speed at which the asteroid drifts down the screen.")]
-    [SerializeField] private float driftSpeed = 5f;
+    [Tooltip("Minimum speed the asteroid can drift.")]
+    [SerializeField] private float minDriftSpeed = 3f;
+
+    [Tooltip("Maximum speed the asteroid can drift.")]
+    [SerializeField] private float maxDriftSpeed = 7f;
+
+    [Tooltip("Speed at which the asteroid tumbles in space.")]
+    [SerializeField] private float rotationSpeed = 40f;
 
     private Rigidbody rb;
+    private Vector3 randomRotationAxis;
 
     private void Start()
     {
@@ -16,18 +23,33 @@ public class Asteroid : MonoBehaviour
         {
             rb.useGravity = false;
 
-            float randomSpeed = Random.Range(driftSpeed * 0.7f, driftSpeed * 1.3f);
-            float randomHorizontalDrift = Random.Range(-1.5f, 1.5f);
+            // --- UPDATED MOVEMENT LOGIC: True Random Multi-Directional Chaos ---
+            // Generates a fully randomized direction vector anywhere on the X/Z gameplay plane
+            float randomX = Random.Range(-1f, 1f);
+            float randomZ = Random.Range(-1f, 1f);
+            Vector3 uniqueDirection = new Vector3(randomX, 0f, randomZ).normalized;
 
-            Vector3 uniqueDirection = new Vector3(randomHorizontalDrift, 0f, -1f).normalized;
+            // Roll a random speed between your configured min and max limits
+            float randomSpeed = Random.Range(minDriftSpeed, maxDriftSpeed);
             rb.linearVelocity = uniqueDirection * randomSpeed;
 
-            float randomSpin = Random.Range(-50f, 50f);
-            rb.angularVelocity = new Vector3(0f, randomSpin, 0f);
+            // Set up a random axis vector for a natural 3D space tumble effect
+            randomRotationAxis = new Vector3(Random.value, Random.value, Random.value).normalized;
+
+            Debug.Log($"[Spawn] Asteroid drifting at speed {randomSpeed.ToString("F1")} in direction {uniqueDirection}.");
         }
         else
         {
             Debug.LogError("Asteroid Error: Rigidbody component is missing!");
+        }
+    }
+
+    private void Update()
+    {
+        // Smoothly tumbles the asteroid geometry over time around its random axis
+        if (rb != null)
+        {
+            transform.Rotate(randomRotationAxis * rotationSpeed * Time.deltaTime);
         }
     }
 

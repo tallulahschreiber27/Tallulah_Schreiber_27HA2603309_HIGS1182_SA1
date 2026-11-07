@@ -208,7 +208,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    private void TriggerPlayerDeath()
+    public void TriggerPlayerDeath()
     {
         // Power-Up Invincibility Check: Intercepts destruction vector if shield is running
         if (PowerUpManager.Instance != null && PowerUpManager.Instance.isInvincible)
