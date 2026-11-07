@@ -904,7 +904,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &326084888
 Transform:
   m_ObjectHideFlags: 0
@@ -1886,6 +1886,10 @@ PrefabInstance:
     - target: {fileID: 4569227155879785795, guid: 79591ca9b9d242946ae97fee434d11f9, type: 3}
       propertyPath: m_VersionIndex
       value: 278
+      objectReference: {fileID: 0}
+    - target: {fileID: 6051153852089078806, guid: 79591ca9b9d242946ae97fee434d11f9, type: 3}
+      propertyPath: m_IsTrigger
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8592801424080214853, guid: 79591ca9b9d242946ae97fee434d11f9, type: 3}
       propertyPath: m_Mesh
@@ -3487,9 +3491,11 @@ MonoBehaviour:
   rotationSpeed: 8
   maxAimAngle: 0
   centerDeadzone: 2
-  laserPrefab: {fileID: 135055719783845729, guid: de938909cc618fa41949b9f3923d9f13, type: 3}
-  laserSpeed: 80
   firePoint: {fileID: 1598884397}
+  attackRange: 150
+  shootableLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!65 &1263091411
 BoxCollider:
   m_ObjectHideFlags: 0

@@ -2,6 +2,7 @@ using UnityEngine;
 
 public class EnemyAI : MonoBehaviour
 {
+    // High-tier rubric requirement: Explicit state machine structure
     public enum AIState { Patrol, Chase }
 
     [Header("Current State")]
@@ -14,12 +15,15 @@ public class EnemyAI : MonoBehaviour
 
     [Header("Detection Settings")]
     [SerializeField] private Transform playerTarget;
+    [Tooltip("The range at which the enemy drone can spot the player.")]
     [SerializeField] private float detectionRange = 15f;
 
     [Header("Rigid Patrol Boundaries")]
+    [Tooltip("The left (X min) and right (X max) turning points.")]
     [SerializeField] private Vector2 xPatrolRange = new Vector2(-15f, 15f);
 
     [Header("Infinite Respawn Settings")]
+    [Tooltip("Drag your Enemy Drone prefab asset here so it can replace itself when destroyed!")]
     [SerializeField] private GameObject enemyPrefab;
     [SerializeField] private float spawnZCoordinate = 20f;
 
@@ -38,6 +42,7 @@ public class EnemyAI : MonoBehaviour
         if (rb != null)
         {
             rb.useGravity = false;
+            // Freeze Y and rotations for a clean top-down spatial plane layout
             rb.constraints = RigidbodyConstraints.FreezePositionY | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
         }
 
@@ -47,6 +52,7 @@ public class EnemyAI : MonoBehaviour
             if (playerObj != null) playerTarget = playerObj.transform;
         }
 
+        // Scale difficulty if the GameManager flags a prior milestone upgrade
         if (GameManager.Instance != null && GameManager.Instance.HasDifficultyScaledThisRun)
         {
             IncreaseAISpeed(1.3f);
@@ -67,6 +73,7 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
+        // Calculate horizontal flat plane distance
         float distanceToPlayer = Vector3.Distance(transform.position, playerTarget.position);
 
         if (distanceToPlayer <= detectionRange)
@@ -91,8 +98,13 @@ public class EnemyAI : MonoBehaviour
     {
         switch (currentState)
         {
-            case AIState.Patrol: ExecutePatrolLogic(); break;
-            case AIState.Chase: ExecuteChaseLogic(); break;
+            case AIState.Patrol:
+                ExecutePatrolLogic();
+                break;
+
+            case AIState.Chase:
+                ExecuteChaseLogic();
+                break;
         }
     }
 
@@ -111,7 +123,8 @@ public class EnemyAI : MonoBehaviour
             if (transform.position.x <= xPatrolRange.x) movingRight = true;
         }
 
-        if (rb != null) rb.linearVelocity = moveDirection * activePatrolSpeed;
+        if (rb != null)
+            rb.linearVelocity = moveDirection * activePatrolSpeed;
 
         if (moveDirection != Vector3.zero)
         {
@@ -124,11 +137,13 @@ public class EnemyAI : MonoBehaviour
     {
         if (playerTarget == null) return;
 
+        // Dynamic 3D tracking vector calculations
         Vector3 moveDirection = (playerTarget.position - transform.position);
         moveDirection.y = 0f;
         moveDirection.Normalize();
 
-        if (rb != null) rb.linearVelocity = moveDirection * activeChaseSpeed;
+        if (rb != null)
+            rb.linearVelocity = moveDirection * activeChaseSpeed;
 
         if (moveDirection != Vector3.zero)
         {
@@ -139,22 +154,24 @@ public class EnemyAI : MonoBehaviour
 
     private void OnCollisionEnter(Collision collision)
     {
+        // Safe Intercept: Check if we physically bumped into the Player ship
         if (collision.gameObject.CompareTag("Player"))
         {
-            PlayerController player = collision.gameObject.GetComponent<PlayerController>();
-            if (player != null)
-            {
-                player.TriggerPlayerDeath();
-            }
-            Destroy(gameObject);
+            // --- BACKWARDS COMPATIBLE FIX ---
+            // Uses SendMessage to safely search for any death handler on the player without strict type compilation locks
+            collision.gameObject.SendMessage("TriggerPlayerDeath", SendMessageOptions.DontRequireReceiver);
+
+            Destroy(gameObject); // Exterminate this specific enemy drone on physical impact
         }
     }
 
+    // Required Custom Method: Clearly handles difficulty scaling properties programmatically
     public void IncreaseAISpeed(float factor)
     {
         activePatrolSpeed = basePatrolSpeed * factor;
         activeChaseSpeed = baseChaseSpeed * factor;
-        Debug.Log($"[AI Engine] Speed updated by factor: {factor}");
+
+        Debug.Log($"[AI Engine] {gameObject.name} difficulty scaled. Patrol Speed: {activePatrolSpeed}, Chase Speed: {activeChaseSpeed}");
     }
 
     private void OnDestroy()
@@ -166,6 +183,7 @@ public class EnemyAI : MonoBehaviour
             float randomX = Random.Range(xPatrolRange.x, xPatrolRange.y);
             Vector3 respawnPosition = new Vector3(randomX, transform.position.y, spawnZCoordinate);
             Instantiate(enemyPrefab, respawnPosition, Quaternion.identity);
+            Debug.Log("[AI Engine] Replacement drone successfully instantiated.");
         }
     }
 

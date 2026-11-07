@@ -20,12 +20,12 @@ public class PlayerController : MonoBehaviour
     [Tooltip("Distance threshold from the drone to your cursor. If the mouse is closer than this, the drone snaps straight forward.")]
     [SerializeField] private float centerDeadzone = 2.0f;
 
-    [Header("Shooting Settings")]
-    [Tooltip("Drag your laser/projectile prefab here!")]
-    [SerializeField] private GameObject laserPrefab;
-    [Tooltip("Speed of the spawned projectile.")]
-    [SerializeField] private float laserSpeed = 80f;
+    [Header("Raycast Laser Shooting Settings")]
     [SerializeField] private Transform firePoint;
+    [Tooltip("How far the invisible laser ray can travel to hit targets.")]
+    [SerializeField] private float attackRange = 150f;
+    [Tooltip("Assign your 'Threats' Layer here in the Inspector so lasers pass right through collectibles!")]
+    [SerializeField] private LayerMask shootableLayers;
 
     private Rigidbody rb;
     private Camera mainCamera;
@@ -77,14 +77,14 @@ public class PlayerController : MonoBehaviour
         Vector3 movement = new Vector3(moveX, 0f, moveZ).normalized * currentSpeed;
         rb.linearVelocity = movement;
 
-        // --- ANIMATION INTERACTION LOOP ---
+        // --- FIXED ANIMATION LOOP MATCHED TO YOUR CONTROLLER PARAMETERS ---
         if (animController != null)
         {
-            // Tracks if there is any movement engine thrust being supplied
-            bool isMoving = (moveX != 0 || moveZ != 0);
-            animController.SetMovementAnimation(isMoving);
+            // Set the isMoving bool parameter to true if there is ANY keyboard input active
+            bool isCurrentlyMoving = (moveX != 0 || moveZ != 0);
+            animController.SetMovementAnimation(isCurrentlyMoving);
 
-            // Directly maps your A/D values (-1 to 1) onto your Drone_Left and Drone_Right animations
+            // Feed the raw horizontal float input right into your banking parameter
             animController.SetHorizontalAnimation(moveX);
         }
 
@@ -92,6 +92,7 @@ public class PlayerController : MonoBehaviour
         float clampedZ = Mathf.Clamp(transform.position.z, zBounds.x, zBounds.y);
         transform.position = new Vector3(clampedX, 0f, clampedZ);
     }
+
 
     private void HandleMouseAiming()
     {
@@ -131,64 +132,74 @@ public class PlayerController : MonoBehaviour
     {
         if (Input.GetButtonDown("Fire1"))
         {
-            ExecutePrefabShoot();
+            ExecuteRaycastShoot();
         }
     }
 
-    private void ExecutePrefabShoot()
+    // --- Airtight Multi-Shot Distribution Core ---
+    private void ExecuteRaycastShoot()
     {
-        if (laserPrefab == null)
-        {
-            Debug.LogWarning("PlayerController: Laser Prefab is missing in the Inspector!");
-            return;
-        }
+        Debug.Log("Player fired a laser bolt.");
 
-        Vector3 spawnPosition = firePoint != null ? firePoint.position : transform.position;
-        Quaternion spawnRotation = firePoint != null ? firePoint.rotation : transform.rotation;
+        Vector3 rayOrigin = firePoint != null ? firePoint.position : transform.position;
+        Vector3 rayDirection = firePoint != null ? firePoint.forward : transform.forward;
 
-        // 1. Fire Main Center Laser Projectile
-        SpawnIndividualLaser(spawnPosition, spawnRotation);
+        // 1. Core Center Laser (Forces Tag Filter Check)
+        PerformSingleRaycastLaser(rayOrigin, rayDirection);
 
-        // Power-Up Scatter Shot Check: Fires 2 additional angled lasers
+        // 2. Scatter Power-Up Side Lasers (Forces Same Tag Filter Check)
         if (PowerUpManager.Instance != null && PowerUpManager.Instance.isScatterActive)
         {
-            Quaternion leftRotation = spawnRotation * Quaternion.Euler(0f, -25f, 0f);
-            Quaternion rightRotation = spawnRotation * Quaternion.Euler(0f, 25f, 0f);
+            Vector3 leftDirection = Quaternion.Euler(0f, -25f, 0f) * rayDirection;
+            Vector3 rightDirection = Quaternion.Euler(0f, 25f, 0f) * rayDirection;
 
-            SpawnIndividualLaser(spawnPosition, leftRotation);
-            SpawnIndividualLaser(spawnPosition, rightRotation);
-            Debug.Log("[Combat Engine] Scatter-Shot spread matrix unleashed.");
+            PerformSingleRaycastLaser(rayOrigin, leftDirection);
+            PerformSingleRaycastLaser(rayOrigin, rightDirection);
+            Debug.Log("[Combat Engine] Raycast scatter split vectors triggered safely.");
         }
 
-        Debug.Log("Player spawned laser configuration.");
-
-        // Trigger the custom weapon animation clip via the controller
-        if (animController != null)
-        {
-            animController.PlayShootAnimation();
-        }
-
-        if (AudioManager.Instance != null)
-        {
-            AudioManager.Instance.PlaySFX(AudioManager.Instance.laserFire);
-        }
+        if (animController != null) animController.PlayShootAnimation();
+        if (AudioManager.Instance != null) AudioManager.Instance.PlaySFX(AudioManager.Instance.laserFire);
     }
 
-    private void SpawnIndividualLaser(Vector3 position, Quaternion rotation)
+    private void PerformSingleRaycastLaser(Vector3 origin, Vector3 direction)
     {
-        GameObject projectile = Instantiate(laserPrefab, position, rotation);
-        Rigidbody projectileRb = projectile.GetComponent<Rigidbody>();
+        RaycastHit hit;
 
-        if (projectileRb != null)
+        // Uses your original shootableLayers setting
+        if (Physics.Raycast(origin, direction, out hit, attackRange, shootableLayers, QueryTriggerInteraction.Collide))
         {
-            projectileRb.linearVelocity = rotation * Vector3.forward * laserSpeed;
+            GameObject hitObject = hit.collider.gameObject;
+
+            // --- THE CRITICAL SHIELD: Wipes out the hit if it encounters your "Collectible" tag ---
+            if (hitObject.CompareTag("Collectible") || hitObject.CompareTag("Scrap") || hitObject.name.Contains("canister"))
+            {
+                Debug.Log("[Combat Safeguard] Laser intercepted. Collectible item unharmed.");
+                return; // Drops execution instantly before points can be added!
+            }
+
+            Debug.Log($"Raycast Hit Target: {hitObject.name}");
+
+            // Handle hitting an Asteroid (DESTRUCTION ONLY - NO SCORE)
+            if (hit.collider.CompareTag("Asteroid"))
+            {
+                Destroy(hit.collider.gameObject);
+                Debug.Log("[Combat] Asteroid successfully shattered via Raycast! (0 points awarded)");
+            }
+            // Handle hitting an Enemy (DESTRUCTION ONLY - NO SCORE)
+            else if (hit.collider.CompareTag("Enemy"))
+            {
+                Destroy(hit.collider.gameObject);
+                Debug.Log("[Combat] Hostile Scavenger Drone neutralized via weapon Raycast! (0 points awarded)");
+            }
         }
-        else
-        {
-            Debug.LogWarning("Projectile lacks a Rigidbody component! Forcing straight translation.");
-            Destroy(projectile, 5f);
-        }
+
+        Debug.DrawRay(origin, direction * attackRange, Color.cyan, 0.15f);
     }
+
+
+
+
 
     private void OnTriggerEnter(Collider other)
     {
@@ -210,14 +221,12 @@ public class PlayerController : MonoBehaviour
 
     public void TriggerPlayerDeath()
     {
-        // Power-Up Invincibility Check: Intercepts destruction vector if shield is running
         if (PowerUpManager.Instance != null && PowerUpManager.Instance.isInvincible)
         {
             Debug.Log("[Shield Defense] Damage completely neutralized by the active Invincibility Power-Up!");
             return;
         }
 
-        // Trigger the visual impact or explosion animation before destroying
         if (animController != null)
         {
             animController.PlayHitAnimation();
