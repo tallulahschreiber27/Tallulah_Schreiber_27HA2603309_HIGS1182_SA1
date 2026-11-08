@@ -1879,13 +1879,17 @@ PrefabInstance:
       propertyPath: playerTarget
       value: 
       objectReference: {fileID: 1263091408}
+    - target: {fileID: 2371935427431905206, guid: 79591ca9b9d242946ae97fee434d11f9, type: 3}
+      propertyPath: speedIncreasePerFuel
+      value: 2
+      objectReference: {fileID: 0}
     - target: {fileID: 4569227155879785795, guid: 79591ca9b9d242946ae97fee434d11f9, type: 3}
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 652328204}
     - target: {fileID: 4569227155879785795, guid: 79591ca9b9d242946ae97fee434d11f9, type: 3}
       propertyPath: m_VersionIndex
-      value: 278
+      value: 281
       objectReference: {fileID: 0}
     - target: {fileID: 6051153852089078806, guid: 79591ca9b9d242946ae97fee434d11f9, type: 3}
       propertyPath: m_IsTrigger
@@ -5944,7 +5948,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &2068994958
 Transform:
   m_ObjectHideFlags: 0

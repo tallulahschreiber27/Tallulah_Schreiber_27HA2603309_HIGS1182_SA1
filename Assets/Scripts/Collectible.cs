@@ -1,12 +1,15 @@
+using System; // 1. Added for Action
 using UnityEngine;
 
 public class Collectible : MonoBehaviour
 {
+    // 2. This is the global event the drone will listen to
+    public static event Action OnFuelCollected;
+
     [Header("Universal Settings")]
     [Tooltip("Allows you to classify what kind of item this is in the inspector.")]
     [SerializeField] private string collectibleType = "Fuel";
 
-    // Safety Gate: Prevents double-counting from multi-script or multi-frame physics triggers
     private bool isCollected = false;
 
     private void Start()
@@ -16,16 +19,18 @@ public class Collectible : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        //Check if the collider is the player AND ensure it hasn't been processed yet
         if (other.CompareTag("Player") && !isCollected)
         {
             isCollected = true;
 
             Debug.Log($"[Collection] Player retrieved a {collectibleType} unit!");
 
-            // ==========================================
-            // PLAY COLLECTIBLE AUDIO HERE
-            // ==========================================
+            // 3. Fire the event specifically if a "Fuel" item is collected
+            if (collectibleType == "Fuel")
+            {
+                OnFuelCollected?.Invoke();
+            }
+
             if (AudioManager.Instance != null)
             {
                 AudioManager.Instance.PlaySFX(AudioManager.Instance.collectiblePickup);
@@ -35,7 +40,6 @@ public class Collectible : MonoBehaviour
                 Debug.LogWarning("AudioManager Instance is missing from the scene!");
             }
 
-            //Update the score exactly once (there was a bug where it doubled)
             if (GameManager.Instance != null)
             {
                 GameManager.Instance.AddScore(1);
@@ -45,7 +49,6 @@ public class Collectible : MonoBehaviour
                 Debug.LogWarning("GameManager Instance is missing from the scene!");
             }
 
-            //Remove the canister from the game space
             Destroy(gameObject);
         }
     }
