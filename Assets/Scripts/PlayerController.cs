@@ -57,10 +57,24 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
+        // GAME OVER / WIN PROTECTION: Uses our new safe public property
+        if (GameManager.Instance != null && !GameManager.Instance.IsGameActive)
+        {
+            return;
+        }
+
+        // PAUSE PROTECTION: Stops inputs if the game is paused
+        if (Mathf.Approximately(Time.timeScale, 0f))
+        {
+            return;
+        }
+
         HandleMovementInput();
         HandleMouseAiming();
         HandleShootingInput();
     }
+
+
 
     private void HandleMovementInput()
     {

@@ -966,8 +966,14 @@ MonoBehaviour:
   pausePanel: {fileID: 0}
   gameOverPanel: {fileID: 0}
   winPanel: {fileID: 0}
+  difficultyNotificationText: {fileID: 0}
+  screenPowerUpText: {fileID: 0}
+  floatingCountdownText: {fileID: 0}
   mainMenuScene: MainMenu
   gameplayScene: Gameplay
+  asteroidSpawnerComponent: {fileID: 0}
+  enemyAIComponent: {fileID: 0}
+  enemyPrefab: {fileID: 0}
 --- !u!1 &1666579722
 GameObject:
   m_ObjectHideFlags: 0
@@ -1053,7 +1059,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 1359954682}
         m_TargetAssemblyTypeName: GameManager, Assembly-CSharp
-        m_MethodName: StartGame
+        m_MethodName: RestartGame
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}

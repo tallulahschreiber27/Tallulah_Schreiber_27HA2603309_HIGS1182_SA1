@@ -38,6 +38,7 @@ public class GameManager : MonoBehaviour
     private bool isPaused = false;
     private bool hasDifficultyScaledThisRun = false;
     private Coroutine activeUICountdownRoutine;
+    public bool IsGameActive => isGameActive;
 
     public bool HasDifficultyScaledThisRun => hasDifficultyScaledThisRun;
 
