@@ -77,22 +77,17 @@ public class PlayerController : MonoBehaviour
         Vector3 movement = new Vector3(moveX, 0f, moveZ).normalized * currentSpeed;
         rb.linearVelocity = movement;
 
-        // --- FIXED ANIMATION LOOP MATCHED TO YOUR CONTROLLER PARAMETERS ---
+        // --- UPGRADED BLEND TREE LOCOMOTION FEED ---
         if (animController != null)
         {
-            // Set the isMoving bool parameter to true if there is ANY keyboard input active
-            bool isCurrentlyMoving = (moveX != 0 || moveZ != 0);
-            animController.SetMovementAnimation(isCurrentlyMoving);
-
-            // Feed the raw horizontal float input right into your banking parameter
-            animController.SetHorizontalAnimation(moveX);
+            // Passes raw horizontal (-1 to 1) and vertical (-1 to 1) inputs straight to the Animator
+            animController.UpdateLocomotion(moveX, moveZ);
         }
 
         float clampedX = Mathf.Clamp(transform.position.x, xBounds.x, xBounds.y);
         float clampedZ = Mathf.Clamp(transform.position.z, zBounds.x, zBounds.y);
         transform.position = new Vector3(clampedX, 0f, clampedZ);
     }
-
 
     private void HandleMouseAiming()
     {
@@ -197,10 +192,6 @@ public class PlayerController : MonoBehaviour
         Debug.DrawRay(origin, direction * attackRange, Color.cyan, 0.15f);
     }
 
-
-
-
-
     private void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("Asteroid") || other.CompareTag("Enemy"))
@@ -221,22 +212,26 @@ public class PlayerController : MonoBehaviour
 
     public void TriggerPlayerDeath()
     {
+        // 1. Check for Invincibility Shield Protection
         if (PowerUpManager.Instance != null && PowerUpManager.Instance.isInvincible)
         {
             Debug.Log("[Shield Defense] Damage completely neutralized by the active Invincibility Power-Up!");
             return;
         }
 
-        if (animController != null)
-        {
-            animController.PlayHitAnimation();
-        }
-
+        // 2. Play Audio instantly
         if (AudioManager.Instance != null)
         {
             AudioManager.Instance.PlaySFX(AudioManager.Instance.gameOver);
         }
 
+        // 3. Play Visual Animation cleanly
+        if (animController != null)
+        {
+            animController.PlayDeathAnimation();
+        }
+
+        // 4. Safely alert the Game Loop
         if (GameManager.Instance != null)
         {
             GameManager.Instance.TriggerGameOver();
@@ -246,6 +241,14 @@ public class PlayerController : MonoBehaviour
             Debug.LogWarning("GameManager Instance is missing from the active runtime execution!");
         }
 
-        Destroy(gameObject);
+        // 5. THE ANIMATION DELAY FIX:
+        // Disable physics immediately so you don't take multiple hits while dying
+        Collider playerCollider = GetComponent<Collider>();
+        if (playerCollider != null) playerCollider.enabled = false;
+
+        if (rb != null) rb.linearVelocity = Vector3.zero;
+
+        // Give the object 0.4 seconds to let the animator show the explosion/hit frames before vanishing!
+        Destroy(gameObject, 0.4f);
     }
 }

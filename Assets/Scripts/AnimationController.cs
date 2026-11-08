@@ -5,38 +5,45 @@ public class AnimationController : MonoBehaviour
 {
     private Animator animator;
 
+    // Cached Animator Parameter Hashes (Massive performance boost over raw strings!)
+    private int horizontalInputHash;
+    private int verticalInputHash;
+    private int shootTriggerHash;
+    private int deathTriggerHash;
+
     private void Awake()
     {
         animator = GetComponent<Animator>();
+
+        // Convert strings to integer hashes in Awake to avoid frame-rate stuttering
+        horizontalInputHash = Animator.StringToHash("horizontalInput");
+        verticalInputHash = Animator.StringToHash("verticalInput");
+        shootTriggerHash = Animator.StringToHash("shoot");
+        deathTriggerHash = Animator.StringToHash("death");
     }
 
     /// <summary>
-    /// Updates the movement state animation based on whether the player is moving forward/back.
+    /// Feed your flat movement input values directly into the 2D Blend Tree.
     /// </summary>
-    public void SetMovementAnimation(bool moving)
+    /// <param name="horizontal">Input.GetAxis("Horizontal") -> Left (-1) to Right (1)</param>
+    /// <param name="vertical">Input.GetAxis("Vertical") -> Backward (-1) to Forward (1)</param>
+    public void UpdateLocomotion(float horizontal, float vertical)
     {
-        animator.SetBool("isMoving", moving);
-    }
-
-    /// <summary>
-    /// Updates the horizontal banking/leaning animation using A/D input.
-    /// </summary>
-    /// <param name="horizontalValue">Value from -1 (Left) to 1 (Right).</param>
-    public void SetHorizontalAnimation(float horizontalValue)
-    {
-        // Passes the raw float directly to control Blend Tree blending or transitions
-        animator.SetFloat("horizontalInput", horizontalValue);
+        // These two values drive your Idle / Forward / Backward / Banking Blend Tree transitions
+        animator.SetFloat(horizontalInputHash, horizontal);
+        animator.SetFloat(verticalInputHash, vertical);
     }
 
     public void PlayShootAnimation()
     {
-        animator.SetTrigger("shoot");
+        animator.SetTrigger(shootTriggerHash);
         Debug.Log("AnimationController: Shoot animation triggered.");
     }
 
-    public void PlayHitAnimation()
+    public void PlayDeathAnimation()
     {
-        animator.SetTrigger("hit");
-        Debug.Log("AnimationController: Hit/Death animation triggered.");
+        // Separated into an explicit Death trigger to handle player destruction cleanly
+        animator.SetTrigger(deathTriggerHash);
+        Debug.Log("AnimationController: Death animation triggered.");
     }
 }
