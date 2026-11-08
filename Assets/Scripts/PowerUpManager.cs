@@ -42,9 +42,6 @@ public class PowerUpManager : MonoBehaviour
         ResetHUDText();
     }
 
-    /// <summary>
-    /// Section A Core PowerUp Hook: Activates a buff, updates text arrays, and runs timelines [INDEX: 0.1.3].
-    /// </summary>
     public void HandlePowerUp(PowerUpType type)
     {
         // Cancel any currently running powerup to prevent overlapping timer bugs
@@ -61,13 +58,13 @@ public class PowerUpManager : MonoBehaviour
     {
         string powerUpName = "";
 
-        // 1. Configure the active power-up modifications
+        //Configure the active power-up modifications
         switch (type)
         {
             case PowerUpType.Invincible:
                 isInvincible = true;
                 powerUpName = "INVINCIBILITY SHIELD";
-                StartCoroutine(FlickerMeshRoutine()); // Run visual feedback flicker
+                StartCoroutine(FlickerMeshRoutine()); 
                 break;
             case PowerUpType.Speed:
                 isSpeedBoosted = true;
@@ -79,10 +76,10 @@ public class PowerUpManager : MonoBehaviour
                 break;
         }
 
-        // Update UI Display Strings [INDEX: 0.1.4]
+        // Update UI Display Strings 
         if (screenPowerUpText != null) screenPowerUpText.text = $"POWERUP: {powerUpName}";
 
-        // 2. Countdown Loop (Updates every second)
+        //Countdown Loop (Updates every second)
         float timeRemaining = powerUpDuration;
         while (timeRemaining > 0)
         {
@@ -93,7 +90,7 @@ public class PowerUpManager : MonoBehaviour
             timeRemaining -= 1f;
         }
 
-        // 3. Clear Buffs upon Expiration
+        //Clear Buffs upon Expiration
         ResetStates();
         ResetHUDText();
         Debug.Log($"[Powerup Manager] {powerUpName} expired cleanly.");

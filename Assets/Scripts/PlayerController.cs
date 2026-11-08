@@ -32,14 +32,14 @@ public class PlayerController : MonoBehaviour
     private Vector3 lastMousePosition;
     private Quaternion targetRotation;
 
-    // Reference cache for your dedicated animation script
+    
     private AnimationController animController;
 
     private void Start()
     {
         rb = GetComponent<Rigidbody>();
         mainCamera = Camera.main;
-        animController = GetComponent<AnimationController>(); // Efficient component access
+        animController = GetComponent<AnimationController>(); 
 
         if (rb == null)
         {
@@ -57,7 +57,7 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
-        // GAME OVER / WIN PROTECTION: Uses our new safe public property
+        // GAME OVER / WIN PROTECTION: Uses the new safe public property
         if (GameManager.Instance != null && !GameManager.Instance.IsGameActive)
         {
             return;
@@ -91,7 +91,6 @@ public class PlayerController : MonoBehaviour
         Vector3 movement = new Vector3(moveX, 0f, moveZ).normalized * currentSpeed;
         rb.linearVelocity = movement;
 
-        // --- UPGRADED BLEND TREE LOCOMOTION FEED ---
         if (animController != null)
         {
             // Passes raw horizontal (-1 to 1) and vertical (-1 to 1) inputs straight to the Animator
@@ -145,7 +144,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    // --- Airtight Multi-Shot Distribution Core ---
+    // For the scatter powerup, now with raycast
     private void ExecuteRaycastShoot()
     {
         Debug.Log("Player fired a laser bolt.");
@@ -153,10 +152,10 @@ public class PlayerController : MonoBehaviour
         Vector3 rayOrigin = firePoint != null ? firePoint.position : transform.position;
         Vector3 rayDirection = firePoint != null ? firePoint.forward : transform.forward;
 
-        // 1. Core Center Laser (Forces Tag Filter Check)
+        // Core Center Laser (Forces Tag Filter Check)
         PerformSingleRaycastLaser(rayOrigin, rayDirection);
 
-        // 2. Scatter Power-Up Side Lasers (Forces Same Tag Filter Check)
+        // Scatter Power-Up Side Lasers (Forces Same Tag Filter Check)
         if (PowerUpManager.Instance != null && PowerUpManager.Instance.isScatterActive)
         {
             Vector3 leftDirection = Quaternion.Euler(0f, -25f, 0f) * rayDirection;
@@ -175,24 +174,23 @@ public class PlayerController : MonoBehaviour
     {
         RaycastHit hit;
 
-        // Uses your original shootableLayers setting
         if (Physics.Raycast(origin, direction, out hit, attackRange, shootableLayers, QueryTriggerInteraction.Collide))
         {
             GameObject hitObject = hit.collider.gameObject;
 
-            // --- THE CRITICAL SHIELD: Wipes out the hit if it encounters your "Collectible" tag ---
+            // Wipes out the hit if it encounters the "Collectible" tag 
             if (hitObject.CompareTag("Collectible") || hitObject.CompareTag("Scrap") || hitObject.name.Contains("canister"))
             {
                 Debug.Log("[Combat Safeguard] Laser intercepted. Collectible item unharmed.");
-                return; // Drops execution instantly before points can be added!
+                return; // Drops execution instantly before points can be added
             }
 
             Debug.Log($"Raycast Hit Target: {hitObject.name}");
 
-            // Handle hitting an Asteroid (DESTRUCTION ONLY - NO SCORE)
+            // Handles hitting an Asteroid 
             if (hit.collider.CompareTag("Asteroid"))
             {
-                // Play asteroid explosion sound using your exact AudioManager clip variable
+                // Play asteroid explosion sound using the exact AudioManager clip variable
                 if (AudioManager.Instance != null && AudioManager.Instance.asteroidDestroyed != null)
                 {
                     AudioManager.Instance.PlaySFX(AudioManager.Instance.asteroidDestroyed);
@@ -201,10 +199,10 @@ public class PlayerController : MonoBehaviour
                 Destroy(hit.collider.gameObject);
                 Debug.Log("[Combat] Asteroid successfully shattered via Raycast! (0 points awarded)");
             }
-            // Handle hitting an Enemy (DESTRUCTION ONLY - NO SCORE)
+            // Handle hitting an Enemy 
             else if (hit.collider.CompareTag("Enemy"))
             {
-                // Play enemy drone explosion sound using your exact AudioManager clip variable
+                // Play enemy drone explosion sound using the exact AudioManager clip variable
                 if (AudioManager.Instance != null && AudioManager.Instance.enemyDestroyed != null)
                 {
                     AudioManager.Instance.PlaySFX(AudioManager.Instance.enemyDestroyed);
@@ -239,26 +237,26 @@ public class PlayerController : MonoBehaviour
 
     public void TriggerPlayerDeath()
     {
-        // 1. Check for Invincibility Shield Protection
+        // Checks for shield
         if (PowerUpManager.Instance != null && PowerUpManager.Instance.isInvincible)
         {
             Debug.Log("[Shield Defense] Damage completely neutralized by the active Invincibility Power-Up!");
             return;
         }
 
-        // 2. Play Audio instantly
+        // Play audio
         if (AudioManager.Instance != null)
         {
             AudioManager.Instance.PlaySFX(AudioManager.Instance.gameOver);
         }
 
-        // 3. Play Visual Animation cleanly
+        // Play Visual Animation 
         if (animController != null)
         {
             animController.PlayDeathAnimation();
         }
 
-        // 4. Safely alert the Game Loop
+        // Safely alert the Game Loop
         if (GameManager.Instance != null)
         {
             GameManager.Instance.TriggerGameOver();
@@ -268,8 +266,6 @@ public class PlayerController : MonoBehaviour
             Debug.LogWarning("GameManager Instance is missing from the active runtime execution!");
         }
 
-        // 5. THE ANIMATION DELAY FIX:
-        // Disable physics immediately so you don't take multiple hits while dying
         Collider playerCollider = GetComponent<Collider>();
         if (playerCollider != null) playerCollider.enabled = false;
 

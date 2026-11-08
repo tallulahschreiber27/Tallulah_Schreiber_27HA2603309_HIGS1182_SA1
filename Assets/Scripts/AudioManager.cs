@@ -2,7 +2,6 @@ using UnityEngine;
 
 public class AudioManager : MonoBehaviour
 {
-    // Static instance allows other scripts to access this easily
     public static AudioManager Instance { get; private set; }
 
     [Header("--- Audio Sources ---")]
@@ -15,7 +14,7 @@ public class AudioManager : MonoBehaviour
     public AudioClip asteroidDestroyed;
     public AudioClip enemyDestroyed;
     public AudioClip collectiblePickup;
-    public AudioClip powerUpPickup; // New dedicated slot for power-ups!
+    public AudioClip powerUpPickup; 
     public AudioClip gameOver;
 
     private void Awake()
@@ -34,7 +33,6 @@ public class AudioManager : MonoBehaviour
 
     private void Start()
     {
-        // Start background music automatically
         PlayMusic(backgroundMusic);
     }
 
@@ -58,10 +56,6 @@ public class AudioManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Mandatory Rubric Method Requirement (Page 5) [INDEX: 0.1.5].
-    /// Redirects string keys cleanly to your working AudioClip properties.
-    /// </summary>
     public void PlaySound(string clipName)
     {
         switch (clipName.ToLower())

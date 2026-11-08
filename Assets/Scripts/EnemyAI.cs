@@ -13,7 +13,7 @@ public class EnemyAI : MonoBehaviour
     [SerializeField] private float baseChaseSpeed = 6f;
     [SerializeField] private float rotationSpeed = 10f;
 
-    // --- NEW INSPECTOR FIELDS ---
+    
     [Header("Fuel Scaling Settings")]
     [Tooltip("How much faster the base speeds get per fuel collection.")]
     [SerializeField] private float speedIncreasePerFuel = 0.5f;
@@ -21,7 +21,7 @@ public class EnemyAI : MonoBehaviour
     [Tooltip("Watch these change in real-time in the Inspector during play mode!")]
     [SerializeField] private float livePatrolSpeed;
     [SerializeField] private float liveChaseSpeed;
-    // ----------------------------
+   
 
     [Header("Detection Settings")]
     [SerializeField] private Transform playerTarget;
@@ -37,7 +37,6 @@ public class EnemyAI : MonoBehaviour
     [SerializeField] private GameObject enemyPrefab;
     [SerializeField] private float spawnZCoordinate = 20f;
 
-    // Static variables persist across drone destruction/respawning!
     private static float staticFuelSpeedModifier = 0f;
 
     private bool movingRight = true;
@@ -46,19 +45,17 @@ public class EnemyAI : MonoBehaviour
 
     private void OnEnable()
     {
-        // Subscribe to the event from your Collectible script
         Collectible.OnFuelCollected += HandleFuelCollected;
     }
 
     private void OnDisable()
     {
-        // Always unsubscribe to prevent memory leak errors
         Collectible.OnFuelCollected -= HandleFuelCollected;
     }
 
     private void Start()
     {
-        // Initialize our live operational speeds from base values
+        // Initialize the live operational speeds from base values
         UpdateLiveSpeeds();
 
         rb = GetComponent<Rigidbody>();
@@ -75,7 +72,6 @@ public class EnemyAI : MonoBehaviour
             if (playerObj != null) playerTarget = playerObj.transform;
         }
 
-        // Scale difficulty if the GameManager flags a prior milestone upgrade
         if (GameManager.Instance != null && GameManager.Instance.HasDifficultyScaledThisRun)
         {
             IncreaseAISpeed(1.3f);
@@ -84,10 +80,8 @@ public class EnemyAI : MonoBehaviour
 
     private void HandleFuelCollected()
     {
-        // 1. Permanently increase the global speed modifier for current AND future drones
         staticFuelSpeedModifier += speedIncreasePerFuel;
 
-        // 2. Refresh the speeds of this active drone instance immediately
         UpdateLiveSpeeds();
 
         Debug.Log($"[AI Engine] Fuel pickup detected! Global modifier: +{staticFuelSpeedModifier}. New Patrol Speed: {livePatrolSpeed}");
@@ -195,18 +189,15 @@ public class EnemyAI : MonoBehaviour
 
     private void OnCollisionEnter(Collision collision)
     {
-        // Safe Intercept: Check if we physically bumped into the Player ship
+        // Checks if you bumped into player ship
         if (collision.gameObject.CompareTag("Player"))
         {
-            // --- BACKWARDS COMPATIBLE FIX ---
-            // Uses SendMessage to safely search for any death handler on the player without strict type compilation locks
             collision.gameObject.SendMessage("TriggerPlayerDeath", SendMessageOptions.DontRequireReceiver);
 
-            Destroy(gameObject); // Exterminate this specific enemy drone on physical impact
+            Destroy(gameObject); 
         }
     }
 
-    // Required Custom Method: Clearly handles difficulty scaling properties programmatically
     public void IncreaseAISpeed(float factor)
     {
         basePatrolSpeed *= factor;
@@ -231,7 +222,6 @@ public class EnemyAI : MonoBehaviour
 
     private void OnApplicationQuit()
     {
-        // Clean up static variable so speed resets when you exit play mode and press play again
         staticFuelSpeedModifier = 0f;
         isQuitting = true;
     }

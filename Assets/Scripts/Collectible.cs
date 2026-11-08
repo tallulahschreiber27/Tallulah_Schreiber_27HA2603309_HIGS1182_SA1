@@ -1,9 +1,8 @@
-using System; // 1. Added for Action
+using System; 
 using UnityEngine;
 
 public class Collectible : MonoBehaviour
 {
-    // 2. This is the global event the drone will listen to
     public static event Action OnFuelCollected;
 
     [Header("Universal Settings")]
@@ -25,7 +24,7 @@ public class Collectible : MonoBehaviour
 
             Debug.Log($"[Collection] Player retrieved a {collectibleType} unit!");
 
-            // 3. Fire the event specifically if a "Fuel" item is collected
+            //Sound plays when a fuel tag is collected
             if (collectibleType == "Fuel")
             {
                 OnFuelCollected?.Invoke();

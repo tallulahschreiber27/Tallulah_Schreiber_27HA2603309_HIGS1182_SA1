@@ -5,7 +5,6 @@ public class AnimationController : MonoBehaviour
 {
     private Animator animator;
 
-    // Cached Animator Parameter Hashes (Massive performance boost over raw strings!)
     private int horizontalInputHash;
     private int verticalInputHash;
     private int shootTriggerHash;
@@ -22,14 +21,9 @@ public class AnimationController : MonoBehaviour
         deathTriggerHash = Animator.StringToHash("death");
     }
 
-    /// <summary>
-    /// Feed your flat movement input values directly into the 2D Blend Tree.
-    /// </summary>
-    /// <param name="horizontal">Input.GetAxis("Horizontal") -> Left (-1) to Right (1)</param>
-    /// <param name="vertical">Input.GetAxis("Vertical") -> Backward (-1) to Forward (1)</param>
     public void UpdateLocomotion(float horizontal, float vertical)
     {
-        // These two values drive your Idle / Forward / Backward / Banking Blend Tree transitions
+        // These two values drive the Idle / Forward / Backward / Banking Blend Tree transitions
         animator.SetFloat(horizontalInputHash, horizontal);
         animator.SetFloat(verticalInputHash, vertical);
     }

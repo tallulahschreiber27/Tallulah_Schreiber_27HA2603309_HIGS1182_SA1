@@ -199,7 +199,7 @@ public class GameManager : MonoBehaviour
         if (highScoreText != null) highScoreText.text = "High Score: " + persistentHighScore;
     }
 
-    // --- INTEGRATED COLLECTIBLE MANAGER COMPATIBILITY METHOD ---
+    // Collectible manager method update
     public void SetTargetWinScore(int amount)
     {
         targetWinScore = amount;
