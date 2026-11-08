@@ -192,12 +192,24 @@ public class PlayerController : MonoBehaviour
             // Handle hitting an Asteroid (DESTRUCTION ONLY - NO SCORE)
             if (hit.collider.CompareTag("Asteroid"))
             {
+                // Play asteroid explosion sound using your exact AudioManager clip variable
+                if (AudioManager.Instance != null && AudioManager.Instance.asteroidDestroyed != null)
+                {
+                    AudioManager.Instance.PlaySFX(AudioManager.Instance.asteroidDestroyed);
+                }
+
                 Destroy(hit.collider.gameObject);
                 Debug.Log("[Combat] Asteroid successfully shattered via Raycast! (0 points awarded)");
             }
             // Handle hitting an Enemy (DESTRUCTION ONLY - NO SCORE)
             else if (hit.collider.CompareTag("Enemy"))
             {
+                // Play enemy drone explosion sound using your exact AudioManager clip variable
+                if (AudioManager.Instance != null && AudioManager.Instance.enemyDestroyed != null)
+                {
+                    AudioManager.Instance.PlaySFX(AudioManager.Instance.enemyDestroyed);
+                }
+
                 Destroy(hit.collider.gameObject);
                 Debug.Log("[Combat] Hostile Scavenger Drone neutralized via weapon Raycast! (0 points awarded)");
             }
@@ -205,6 +217,7 @@ public class PlayerController : MonoBehaviour
 
         Debug.DrawRay(origin, direction * attackRange, Color.cyan, 0.15f);
     }
+
 
     private void OnTriggerEnter(Collider other)
     {
